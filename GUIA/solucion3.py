@@ -9,6 +9,7 @@ def productor():
 		global buffer
 		item = n*n
 		libre.acquire()
+		mutex.acquire()
 		indice +=1
 		buffer[indice]=item
 		print(f"productor {indice} {item} {buffer}", flush = True)
