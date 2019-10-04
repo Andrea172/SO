@@ -3,9 +3,9 @@ import threading as th
 indice = -1
 buffer = [None,None,None,None,None]
 
-def productor(cv):
+def productor(c):
 	for n in range(20):
-		with cv:
+		with c:
 			global indice
 			global buffer
 			item = n*n
@@ -17,10 +17,10 @@ def productor(cv):
 			if (indice>-1):
 				c.notify()
 
-def consumidor(cv):
+def consumidor(c):
 	item = None
 	for _ in range(20):
-		with cv:
+		with c:
 			global indice
 			global buffer
 			if (indice<=-1):
