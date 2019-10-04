@@ -9,7 +9,7 @@ def productor(cv):
 			global indice
 			global buffer
 			item = n*n
-			while (indice>=4):
+			if (indice>=4):
 				c.wait()
 			indice +=1
 			buffer[indice]=item
@@ -23,7 +23,7 @@ def consumidor(cv):
 		with cv:
 			global indice
 			global buffer
-			while (indice<=-1):
+			if (indice<=-1):
 				c.wait()
 			item = buffer[indice]
 			buffer[indice]=None
