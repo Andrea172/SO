@@ -1,0 +1,47 @@
+1. ./vmsim -p 4 -s 16 -v random example_trace.txt
+
+2. 	1, R, 0x0000E00
+	1, R, 0x0000000
+	1, R, 0x0000000
+	1, R, 0x0000000
+	1, R, 0x0000000
+	1, R, 0x0000000
+	1, R, 0x0000200 
+	1, R, 0x0000200 
+	1, R, 0x0000200 
+	1, R, 0x0000200 
+
+3. Si, es correcta y se logra corriendo el comando:
+	./vmsim -p 5 -s 256 -v random pregunta3.txt 
+
+	- Se tomará el 0x100 y se hará referencia a la página 0x10 que dará un fallo de página y se le asignará el marco 3
+
+	- Se tomará el 0x200 y se hará referencia a la página 0x20 que dará un fallo de página y se le asignará el marco 1
+
+	- Se tomará el 0x300 y se hará referencia a la página 0x30 que dará un fallo de página y se le asignará el marco 2
+
+	- Se tomará el 0x400 y se hará referencia a la página 0x40 que dará un fallo de página y se le asignará el marco 0
+
+	- Se tomará el 0x500, se hará referencia a la página 0x50 que dará un fallo de página, se desalojará página 0x10 y se le asignará el marco 3
+
+	- Se tomará el 0x100, se hará referencia a la página 0x10 que dará un fallo de página, se desalojará página 0x40 y se le asignará el marco 0
+
+	- Se tomará el 0x200 y se hará referencia a la página 0x20 que dará un hit de página
+
+	- Se tomará el 0x300 y se hará referencia a la página 0x30 que dará un hit de página 
+
+	- Se tomará el 0x600, se hará referencia a la página 0x60 que dará un fallo de página, se desalojará página 0x20 y se le asignará el marco 1
+
+	- Se tomará el 0x700, se hará referencia a la página 0x70 que dará un fallo de página, se desalojará página 0x30 y se le asignará el marco 2
+
+	Lo que al final me da un total de 8 Page Faults pero solo 7 Compulsory Page Faults ya que solo hay 7 referencias de página diferentes.
+
+4. 	- 	Que el vfn_bits, es decir, los bits para el virtual frame number sean mayores a 24, ya que
+		tomarían los dos primeros niveles de 12 bits cada uno y el tercero adicional tomando 
+		hasta 8 bits si es de 32. Esto se da si la dirección virtual tiene 32 bits más que el tamaño de página.
+
+	-	Porque los bits de la dirección virtual vienen predefinidos y no se pueden setear, solo si
+		cambias en el código vmsim.h el valor de addr_space_bits.
+
+
+
