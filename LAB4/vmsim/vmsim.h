@@ -18,7 +18,7 @@ typedef enum _ref_kind {
 
 #define REF_KIND_NUM 3
 
-const static uint addr_space_bits = 16;
+const static uint addr_space_bits = 8;
 extern uint vfn_bits;
 extern int ref_counter;
 

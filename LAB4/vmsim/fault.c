@@ -23,6 +23,7 @@ fault_handler_info_t fault_handlers[6] = {
   { "fifo", fault_fifo },
   { "clock", fault_clock },
   { "lru", fault_lru },
+  {"second",fault_second},
   { NULL, NULL } /* last entry must always be NULL/NULL */
 };
 
@@ -39,25 +40,28 @@ void fault_fifo(pte_t *pte, ref_kind_t type) {
 	static int check = 1;
 	static int frame = 0;
 	int loc =0, i;
-
+	pte_t *temp;
+	printf("Fallo de página\n");
 	if (check <= opts.phys_pages){
 		physmem_load(frame,pte, type);
 		check = check +1;
 		frame = frame +1 ;
 	}
 	else { //order
-		for (int i =0;i<=opts.phys_pages;i++){
-			for (int j=0;j<=opts.phys_pages-1;j++){
-				if (physmem[i]>physmem[j+1]){
+		for (int i =0;i<opts.phys_pages;i++){
+			for (int j=0;j<(opts.phys_pages-i-1);j++){
+				if (physmem[j]->counter>physmem[j+1]->counter){
 					temp = physmem[j];
-					physmem[j] = physmem[i];
-					physmem[i] = temp;
+					physmem[j] = physmem[j+1];
+					physmem[j+1] = temp;
 
 				}
 
 			}
+		
 		}
 		// go out the fisrt one 
+		printf("Se asigna el marco: %d \n" loc);
 		physmem_evict(loc, type);
 		physmem_load(loc, pte, type);
 
@@ -98,7 +102,7 @@ void fault_clock(pte_t *pte, ref_kind_t type) {
 			}
 
 			if((i+1) == opts.phys_pages )
-				i=0//i = -1;	
+				i = -1;	
 
 
 		}
@@ -124,7 +128,7 @@ void fault_lru(pte_t *pte, ref_kind_t type) {
 	//printf("LRU not implemented yet!\n");
 	static int check = 1;
 	static int frame = 0;
-	int loc =0, i;
+	int loc =0, i,min;
 	if (check <= opts.phys_pages){
 
 		physmem_load(frame,pte, type);
@@ -157,7 +161,8 @@ void fault_lru(pte_t *pte, ref_kind_t type) {
 void fault_second(pte_t *pte, ref_kind_t type){
 	static int check = 1;
 	static int frame = 0;
-	int loc =0, i;
+	int loc =0;
+	pte_t *temp;
 	if (check <= opts.phys_pages){
 
 		physmem_load(frame,pte, type);
@@ -167,29 +172,13 @@ void fault_second(pte_t *pte, ref_kind_t type){
 
 	}
 	else {
-		/*min = physmem[0]->count;
-		for (i=0;i<opts.phys_pages;i++){
-			if (physmem[i]->count<min)
-				min = physmem[i]->count;
-		}
-		for (i=0;i<opts.phys_pages;i++){
-			if (physmem[i]->count==min &&  physmem[i]->referenced==0 ){
-				loc = i;
-				break;
-
-			}
-			else if (physmem[i]->count==min){
-				physmem[i]->referenced==1
-			}
-
-		}*/
 		//order
-		for (int i =0;i<=opts.phys_pages;i++){
-			for (int j=0;j<=opts.phys_pages-1;j++){
-				if (physmem[i]->count>physmem[j+1]->count){
+		for (int i =0;i<opts.phys_pages;i++){
+			for (int j=0;j<(opts.phys_pages-i-1);j++){
+				if (physmem[j]->counter>physmem[j+1]->counter){
 					temp = physmem[j];
-					physmem[j] = physmem[i];
-					physmem[i] = temp;
+					physmem[j] = physmem[j+1];
+					physmem[j+1] = temp;
 
 				}
 
@@ -203,7 +192,7 @@ void fault_second(pte_t *pte, ref_kind_t type){
 				break;
 			}
 			else {
-				physmem[i]->reference=1;
+				physmem[i]->reference=0;
 
 			}
 		}

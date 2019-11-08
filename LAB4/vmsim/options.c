@@ -69,7 +69,7 @@ void options_process(int argc, char **argv) {
   opts.verbose = FALSE;
   opts.test = FALSE;
   opts.pagesize = 1024;
-  opts.phys_pages = 128;
+  opts.phys_pages = 4;
   opts.limit = 0;
   
   while (1) {

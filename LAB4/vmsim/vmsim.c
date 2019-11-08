@@ -10,6 +10,7 @@
 #include <physmem.h>
 #include <stats.h>
 #include <fault.h>
+#include <string.h>
 
 void init();
 void test();
@@ -77,7 +78,9 @@ void simulate() {
 	  fprintf(stderr, "\n Could not open input file %s.", opts.input_file);
 	exit(1);
   }
-   printf("\nStarting simulation: ");
+   printf("Algoritmo elegido: %s", opts.fault_handler->name);
+   printf("Marcos de paǵinas: %d", opts.phys_pages);
+  printf("\nStarting simulation: ");
   printf("vaddr (Virtual Address) has %d bits, consisting of higher %d bits for vfn (Virtual Frame Number), and lower %d bits for offset within each page (log_2(pagesize=%d))\n",
 	addr_space_bits, vfn_bits, log_2(opts.pagesize), opts.pagesize);
   while (fscanf(fin, "%d, %c, %x", &pid, &ch, &vaddr) !=EOF) {
@@ -104,13 +107,25 @@ void simulate() {
       printf("Got a page %s. Do you want to dump out the page table and physmem? y or n: ", pgfault? "fault":"hit");
       scanf("%s", response);
 #endif
+    int val=0;
     if (!pte->valid) { /* Fault */
+      val=1;
       stats_miss(type);
       handler(pte, type);
     } 
     
     pte->reference = 1;
-    pte->counter = ref_counter++; //used by LRU
+    if((strcmp(opts.fault_handler->name,"fifo")==0)){
+      if(val==0){ 
+        pte->counter = pte->counter;
+      }
+      else{
+        pte->counter = ref_counter++;
+      }
+    }
+    else{
+      pte->counter = ref_counter++; //used by LRU
+    }
 
     if (type == REF_KIND_STORE)
       pte->modified = TRUE;
@@ -118,8 +133,9 @@ void simulate() {
 #ifdef DEBUG
    //printf("Page %s", pgfault? "Fault!\n": "Hit!\n");
       if (response[0]=='Y' || response[0]=='y') {
-	pagetable_dump();
-	physmem_dump();
+	//pagetable_dump();
+	//physmem_dump();
+
 	response[0]='N';
       }
 #endif
