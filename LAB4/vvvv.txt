@@ -1,0 +1,71 @@
+1) Por defecto hay 128 páginas fisicas (línea 72, archivo options.c) y de 1024 bytes cada una (línea 71, archivo options.c). Entonces el tamaño de la memoria física será la multiplicación de estos valores :
+128 x 1024 = 131072 Bytes.
+
+2) Se tiene 16 bits para el espacio de direcciones virtuales (archivo vmsim.h, línea 21). Entonces el tamaño del espacio de direcciones es 2 elevado a la 16. 
+2 a la 16 = 65536 Bytes.
+
+3) La determinación de los niveles se hace en el procedure pagetable_init en el archivo pagetable.c. Se tendrá que modificar la variable "addr_space_bits" que es 16 a 32 bits para obtener 4Gb de espacio de dirección virtual. El tamaño de página es de 4kb, lo cual son 12 bits. Entonces al iniciar pagetable_init(archivo pagetable.c, línea 56) se tiene que la variable vfn_bits es la diferencia de addr_space_bits con la cantidad de bits que ocupa una página.(vfn_bits = 32 - 12 = 20). Por cada nivel en la tabla de páginas(3 niveles en total hay como máximo que se pueden utilizar) se tiene como máximo 12 bits por cada nivel, excepto para el último nivel que puede alojar como máximo 8 bits (esto se puede apreciar en el arreglo levels[] en la línea 29 hasta la 33). Como solo se van a usar 20 bits(vfn_bits), solo se utilizarán 2 niveles(en el primer nivel uso 12, y en el segundo lo que me falta para alcanzar 20, lo cual es 8). Este cálculo se realizo en el lazo while que está dentro del procedimiento pagetable_init (línea 68 hasta la 73). Luego se realizan los cambios en el arreglo levels[] para utilizar solo los 2 primeros niveles, indicando que el nivel 2 tendrá la variable booleana is_leaf(que representa si el nivel actual es el nivel más bajo) es true (línea 75 hasta la 77). Respuesta final: solo se utilizan 2 niveles.
+
+pte_t *pagetable_lookup_vaddr(uint vfn, ref_kind_t type) {
+  return pagetable_lookup_helper(vfn, 0, vfn, root_table, type);//Llama a la función pagetable_lookup_helper
+}
+
+pte_t *pagetable_lookup_helper(uint vfn, uint bits, uint masked_vfn,
+			       pagetable_t *pages, ref_kind_t type) {
+  uint index; //Este será el índice de la página que quiero acceder
+  int log_size; 
+
+  log_size = levels[pages->level].log_size;//Extraigo la cantidad de bits según la cantidad de páginas del nivel actual
+
+  index = getbits(masked_vfn, vfn_bits - (1+bits), log_size); //Obtiene el índice de la página a la que se quiere acceder según el vfn(página virtual) dado.
+
+#ifdef DEBUG
+  //printf("vfn(0x%x), Calling index(%d)=getbits(masked_vfn(0x%x), vfn_bits(%d)-(1+bits(%d)), log_size(%d)\n",
+	//vfn,index, masked_vfn, vfn_bits, bits, log_size);
+#endif
+
+
+  bits += log_size;
+  masked_vfn = getbits(masked_vfn, vfn_bits - (1+bits), vfn_bits - bits);//Coloca en 0 los bits que ya no se utilizarán para poder utilizar los bits restantes en el cálculo del índice del siguiente nivel. En este caso, como solo hay un nivel, lo que queda es el offset (10 bits)
+#ifdef DEBUG
+  //printf("Again calling index(%d)=getbits(masked_vfn(0x%x), vfn_bits(%d)-(1+bits(%d)), log_size(%d)\n",
+	//index, masked_vfn, vfn_bits, bits, log_size);
+#endif
+  
+  if (levels[pages->level].is_leaf) { //Si ésta en el último nivel entra a este if
+    if (pages->table[index] == NULL) { //Si la página a la que quiero acceder no existe entonces hago la reserva de ese espacio, caso contrario, solo retorna el espacio que ya está reservado
+      /* Compulsory miss - first access */
+      stats_compulsory(type);//Incrementa contador de las estadistícas que se llevan del programa cuando se hace una reserva de un espacio que era nulo
+      pages->table[index] = (void*)pagetable_new_pte(vfn); //Reserva el page table entry 
+    }
+    return (pte_t*)(pages->table[index]);//Retorno el espacio que desea acceder
+  } else {//Si no estuviera en el último nivel entra a este if
+    if (pages->table[index] == NULL) { //Si esa página a la que quiero acceder no está reservada, se hará la reserva
+      pages->table[index] = pagetable_new_table(pages->level+1); //Reservo la tabla de páginas de un nivel inferior correspondiente a la página en el índice de este nivel.
+    }
+    return pagetable_lookup_helper(vfn, bits, masked_vfn, pages->table[index],//Se reutiliza la función recursivamente para ir un nivel más abajo hasta llegar al último nivel
+				   type);
+  }
+}
+
+
+4) El proceso que realiza la invocación a pagetable_lookup_vaddr(vaddr_to_vfn(vaddr), type) es simulate() dentro del archivo vmsim.c. Dentro de simulate() primero se lee el siguiente formato (PID,TIPO_OPERACION,DIRECCIÓN VIRTUAL). Luego se hace la llamada a pagetable_lookup_vaddr. Como el simulador actualmente solo usa un nivel debido a que el pagesize es de 10 bits y el espacio de direcciones virtuales es de 16 bits solo es necesario un nivel de tabla de páginas con 6 bits (nivel 1, 64 páginas virtuales, 6 bits). pagetable_lookup_vaddr llama a pagetable_lookup_helper.
+A partir de la página virtual que se pasó como parámetro extrae el índice de página que se va a utilizar y se almacena en la variable index. (index = getbits(masked_vfn, vfn_bits - (1+bits), log_size))
+Luego pregunta si el nivel actual es el nivel más bajo (if (levels[pages->level].is_leaf). 
+En este caso sí lo es (ya que solo tiene un nivel la tabla de páginas) y luego pregunta si ese espacio ha sido reservado antes (if (pages->table[index] == NULL)).
+En el caso que no haya sido reservado entrará al if y realizará la reserva de ese espacio. (pages->table[index] = (void*)pagetable_new_pte(vfn));
+Finalmente retorna el espacio que se solicitó en la tabla de páginas.
+
+6) He creado un nuevo archivo el cual se llama ejemplo.txt que contiene una cadena de referencia en base a los otros archivos. Si ejecutamos el simulador utilizando el algoritmo fifo obtendremos los siguientes valores según la cantidad de marcos ingresadas:
+La cadena de referencia es : 1 2 3 4 1 2 5 1 2 3 4
+
+	Marcos   Fallos de página
+	3        9
+	4        10
+	5        5
+	6        5
+	7        5
+	Y así sucesivamente se obtiene 5 constantemente.
+
+	Acá se puede apreciar la anomalía de Belady, vemos que al incrementar los marcos de 3 a 4 el número de fallos de página se incrementa. Posteriormente, al seguir aumenta el número de marcos el número de fallos de página se mantendrá constante.
+
