@@ -61,9 +61,9 @@ class App(tk.Tk):
         filename = fd.askopenfilename(title="Open file", initialdir="/home/alejandro/SourceCode/Python", filetypes=filetypes)
         self.fname = filename
         with open(self.fname,mode='rb') as file:
-            file.seek(54)
-            name = str(file.read(8))
-            #print(name)
+            file.seek(54)#BOOT SECTOR EN LOS BYTES (54-61)
+            name = str(file.read(8))#61-54+1=8
+            
             if 'FAT' not in name:
                 self.show_error2()
         

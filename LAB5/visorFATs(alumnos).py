@@ -5,13 +5,24 @@
 import tkinter as tk
 import tkinter.filedialog as fd
 import tkinter.messagebox as mb
+import math
 
 class App(tk.Tk):
      def __init__(self):
          super().__init__()
-         self.fname = None
+         self.fname = None#
+         self.sectorsXclusters=0#
+         self.rootEntries=0#
+         self.nSectors=0#
+         self.rSectors=0#
+         self.bytesXSector=0#
+         self.numFats=0#
+         self.sectorsXFAT=0#
+
          
-         self.title("Visor File System FAT")         
+         self.title("Visor File System FAT")   
+         root=TK()
+         self.scrollbar=tk.Scrollbar(root)      
          self.canvas = tk.Canvas(self, width=450, height=480, bg="white")         
          btn_file = tk.Button(self, text="Choose file system image",command=self.choose_file)         
          btn_showBoot = tk.Button(self, text="Boot Sector",command=self.show_bootsector)
@@ -54,27 +65,34 @@ class App(tk.Tk):
                   bytesps=file.read(2)
                   i=int.from_bytes(bytesps,byteorder='little')
                   self.canvas.create_text(30,80, text='Bytes per Sector: '+str(i),anchor=tk.W)
+                  self.bytesXSector=bytesps
                   
                   sectorespc=file.read(1)
                   i=int.from_bytes(sectorespc,byteorder='little')
                   self.canvas.create_text(30,100, text='Sectors per Cluster: '+str(i),anchor=tk.W)
-                  
+                  self.sectorsXclusters=sectorespc
+
+
                   sectoresr = file.read(2)
                   i=int.from_bytes(sectoresr,byteorder='little')
                   self.canvas.create_text(30,120, text='Reserved sectors: '+str(i),anchor=tk.W)
+                  self.rSectors=sectoresr
                   
                   nfats=file.read(1)
                   i=int.from_bytes(nfats,byteorder='little')
                   self.canvas.create_text(30,140, text='Number of FAT copies: '+str(i),anchor=tk.W)
+                  self.numFats=i
                   
                   entradasRaizdir = file.read(2)
                   i=int.from_bytes(entradasRaizdir,byteorder='little')
                   self.canvas.create_text(30,160, text='Number of possible root entries: '+str(i),anchor=tk.W)
-                  
+                  self.rootEntries=entradasRaizdir
+
                   sectorest=file.read(2)
                   i=int.from_bytes(sectorest,byteorder='little')                  
                   self.canvas.create_text(30,180, text='Small number of sectors: '+str(i),anchor=tk.W)
-                                    
+                  self.nSectors+=sectorest
+
                   descriptorm=file.read(1)
                   i=int.from_bytes(descriptorm,byteorder='little')
                   self.canvas.create_text(30,200, text='Media Descriptor: '+format(i,'X'),anchor=tk.W)
@@ -82,6 +100,7 @@ class App(tk.Tk):
                   sectorespf=file.read(2)
                   i=int.from_bytes(sectorespf,byteorder='little')
                   self.canvas.create_text(30,220, text='Sectors per FAT: '+str(i),anchor=tk.W)
+                  self.sectorsXFAT=sectorespf
                   
                   sectorespt=file.read(2)
                   i=int.from_bytes(sectorespt,byteorder='little')
@@ -98,7 +117,9 @@ class App(tk.Tk):
                   sectorestl=file.read(4)
                   i=int.from_bytes(sectorestl,byteorder='little')
                   self.canvas.create_text(30,300, text='Large number of sectors: '+str(i),anchor=tk.W)
-                  
+                  self.nSectors+=sectorestl
+
+
                   drive=file.read(1)
                   i=int.from_bytes(drive,byteorder='little')
                   self.canvas.create_text(30,320, text='Drive Number: '+str(i),anchor=tk.W)
@@ -136,12 +157,13 @@ class App(tk.Tk):
              self.canvas.delete("all")
              w = self.canvas.winfo_width() 
              h = self.canvas.winfo_height()
+             nData=math.floor((self.nSectors-self.rSectors-self.numFats*self.sectorsXFAT)/self.sectorsXclusters) #se
              self.canvas.delete(tk.ALL)
              with open(self.fname,mode='rb') as file:              
-                  file.seek(2048)
+                  file.seek(self.sectorsXclusters * self.rootEntries)
                   ## Lee solo las primeras 512 entradas de la FAT
                   fat = []
-                  for i in range(240):
+                  for i in range(nData):
                       byte=file.read(2)
                       i=int.from_bytes(byte,byteorder='little',signed=True)
                       fat.append(i)                  
@@ -157,7 +179,7 @@ class App(tk.Tk):
                           else: 
                               self.canvas.create_rectangle(i,j,i+30,j+30,fill="white", outline = 'black') 
                           cont += 1
-                          if cont == 240:
+                          if cont == self.sectorsXclusters * self.rootEntries:
                               return
                         
      def show_rootdir(self):
