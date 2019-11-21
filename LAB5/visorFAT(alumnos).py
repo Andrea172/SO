@@ -20,6 +20,7 @@ class App(tk.Tk):
          self.sectorsPerFat = 0
          self.bytesRead=0
          self.bytesPerSector=0
+         self.numberTracks = 0
          
          self.title("Visor File System FAT") 
          root = tk.Tk()
@@ -61,6 +62,7 @@ class App(tk.Tk):
          	texto=volumen.decode('utf-8')
          	if 'FAT' not in texto:
          		self.show_error1()
+         		self.fname= None
 
 
 
@@ -127,6 +129,7 @@ class App(tk.Tk):
                   sectorespt=file.read(2)
                   i=int.from_bytes(sectorespt,byteorder='little')
                   self.canvas.create_text(30,240, text='Sectors per Track: '+str(i),anchor=tk.W)
+                  self.numberTracks = i
                  
                   numerodec=file.read(2)
                   i=int.from_bytes(numerodec,byteorder='little')
@@ -166,7 +169,7 @@ class App(tk.Tk):
                   self.canvas.create_text(30,420, text='File System Type: '+texto,anchor=tk.W)
                   if ("FAT32" in texto):	
                      self.bytesRead=4
-                  else
+                  else:
                       self.bytesRead=2
 
                   
@@ -214,6 +217,37 @@ class App(tk.Tk):
                               return
                         
      def show_rootdir(self):
+     	if self.fname == None:
+     		self.show_error1()
+     	else:
+     		self.canvas.delete("all")
+     	q = (self.reservedSectors+self.numFats*self.sectorsPerFat)*self.bytesPerSector
+
+     	with open(self.fname,mode='rb') as file:   
+     		file.seek(q)
+     		desplaza = 20
+     		for j in range(self.numberTracks): 
+     		#byte= file.read(1)
+     		#i=int.from_bytes(byte,byteorder='little',signed=True)
+     		#if (format(i,'X')== format(0,'X')):pass
+
+     		    name=file.read(8).decode('latin_1')
+     		    ext = file.read(3).decode('latin_1')
+     		    byte=file.read(15)
+     		    byte=file.read(2)
+     		    firstCluster=int.from_bytes(byte,byteorder='little',signed=True)
+     		    byte = file.read(4)
+     		    sizeFile = int.from_bytes(byte,byteorder='little',signed=True)
+
+     		    if (firstCluster>0):
+     		    	self.canvas.create_text(30,desplaza, text='File name: '+name +'.'+ext,anchor=tk.W)
+     		    	desplaza=desplaza+20
+     		    	self.canvas.create_text(30,desplaza, text='Inicio de cluster: '+str(firstCluster),anchor=tk.W)
+     		    	desplaza=desplaza+20
+     		    	self.canvas.create_text(30,desplaza, text='Size: '+str(sizeFile),anchor=tk.W)
+     		    	desplaza = desplaza + 20
+
+
             
                        
      def show_error1(self):
