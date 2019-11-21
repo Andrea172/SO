@@ -17,7 +17,7 @@ class App(tk.Tk):
          self.reservedSectors = 0
          self.totalSectors = 0
          self.numFats = 0
-         self.sectorsPerFat = 0
+         self.sectorsPerFat = 0	
          self.bytesRead=0
          self.bytesPerSector=0
          self.numberTracks = 0
@@ -62,7 +62,9 @@ class App(tk.Tk):
          	texto=volumen.decode('utf-8')
          	if 'FAT' not in texto:
          		self.show_error1()
+
          		self.fname= None
+
 
 
 
@@ -217,6 +219,7 @@ class App(tk.Tk):
                               return
                         
      def show_rootdir(self):
+
      	if self.fname == None:
      		self.show_error1()
      	else:
@@ -250,6 +253,7 @@ class App(tk.Tk):
 
             
                        
+
      def show_error1(self):
             msg = "No se ha elegido la imagen del sistema de archivos"
             mb.showerror("Error", msg)
