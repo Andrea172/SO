@@ -17,7 +17,7 @@ class App(tk.Tk):
          self.reservedSectors = 0
          self.totalSectors = 0
          self.numFats = 0
-         self.sectorsPerFat = 0
+         self.sectorsPerFat = 0	
          self.bytesRead=0
          self.bytesPerSector=0
          
@@ -61,6 +61,7 @@ class App(tk.Tk):
          	texto=volumen.decode('utf-8')
          	if 'FAT' not in texto:
          		self.show_error1()
+         		self.fname=None
 
 
 
@@ -166,7 +167,7 @@ class App(tk.Tk):
                   self.canvas.create_text(30,420, text='File System Type: '+texto,anchor=tk.W)
                   if ("FAT32" in texto):	
                      self.bytesRead=4
-                  else
+                  else:
                       self.bytesRead=2
 
                   
@@ -214,8 +215,11 @@ class App(tk.Tk):
                               return
                         
      def show_rootdir(self):
-            
-                       
+     	self.canvas.delete(tk.ALL)
+
+     	with open(self.fname,mode='rb') as file:
+     		inicioRootDir = self
+
      def show_error1(self):
             msg = "No se ha elegido la imagen del sistema de archivos"
             mb.showerror("Error", msg)
