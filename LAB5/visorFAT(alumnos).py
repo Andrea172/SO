@@ -21,6 +21,7 @@ class App(tk.Tk):
          self.bytesRead=0
          self.bytesPerSector=0
          self.numberTracks = 0
+         self.pos = 0
          
          self.title("Visor File System FAT") 
          root = tk.Tk()
@@ -28,7 +29,7 @@ class App(tk.Tk):
          self.height = 1000000
          self.frame=tk.Frame(self,width=300,height=300)
          self.frame.grid(row=5,column=0)
-         
+         self.fat = []
          self.canvas = tk.Canvas( self.frame,width=480, height=480, bg="white")
          vbar = tk.Scrollbar(self.frame, orient = tk.VERTICAL)
          vbar.pack(side=tk.RIGHT,fill=tk.Y)
@@ -198,20 +199,20 @@ class App(tk.Tk):
              with open(self.fname,mode='rb') as file:              
                   file.seek(q)
                   ## Lee solo las primeras 512 entradas de la FAT
-                  fat = []
+                  self.fat = []
                   for i in range(c):
                       byte=file.read(self.bytesRead)
                       i=int.from_bytes(byte,byteorder='little',signed=True)
-                      fat.append(i)                  
+                      self.fat.append(i)                  
                   cont = 0
                   for j in range(0,h,40):
                       for i in range(0,w,40):
-                          if fat[cont] != 0:
+                          if self.fat[cont] != 0:
                               if cont == 0 or cont == 1: 
                                   self.canvas.create_rectangle(i,j,i+40,j+40,fill="red", outline = 'black')
                               else:
                                   self.canvas.create_rectangle(i,j,i+40,j+40,fill="yellow", outline = 'black')
-                                  self.canvas.create_text(i+20,j+20,text=str(fat[cont]))
+                                  self.canvas.create_text(i+20,j+20,text=str(self.fat[cont]))
                           else: 
                               self.canvas.create_rectangle(i,j,i+40,j+40,fill="white", outline = 'black') 
                           cont += 1
@@ -241,17 +242,54 @@ class App(tk.Tk):
      		    firstCluster=int.from_bytes(byte,byteorder='little',signed=True)
      		    byte = file.read(4)
      		    sizeFile = int.from_bytes(byte,byteorder='little',signed=True)
-
+     		    obj = [0]*1000
      		    if (firstCluster>0):
-     		    	self.canvas.create_text(30,desplaza, text='File name: '+name +'.'+ext,anchor=tk.W)
+     		    	obj[j] =self.canvas.create_text(30,desplaza, text='File name: '+name +'.'+ext,anchor=tk.W)
      		    	desplaza=desplaza+20
      		    	self.canvas.create_text(30,desplaza, text='Inicio de cluster: '+str(firstCluster),anchor=tk.W)
      		    	desplaza=desplaza+20
      		    	self.canvas.create_text(30,desplaza, text='Size: '+str(sizeFile),anchor=tk.W)
      		    	desplaza = desplaza + 20
+     		    	self.pos = firstCluster
+     		    	self.canvas.tag_bind(obj[j], 'clickeame', self.pintar)
 
 
-            
+     def pintar(self):
+     	if self.fname == None:
+     		self.show_error1()
+     	else:
+     		self.canvas.delete("all")
+     		w=self.width
+     		h=self.height
+     		self.canvas.delete(tk.ALL)
+     		q = self.rootEntries * self.sectorsxClusters
+     		#c = math.floor((self.totalSectors-self.reservedSectors-self.numFats*self.sectorsPerFat)/self.sectorsxClusters)
+     		c= int((self.sectorsPerFat*self.bytesPerSector )/self.bytesRead)
+
+     		with open(self.fname,mode='rb') as file:
+     			file.seek(q)
+     			## Lee solo las primeras 512 entradas de la FAT
+     			cont = 0
+     			for j in range(0,h,40):
+     				for i in range(0,w,40):
+     					if fat[cont] != 0:
+     						if cont == 0 or cont == 1:
+     							self.canvas.create_rectangle(i,j,i+40,j+40,fill="red", outline = 'black')
+     						else:
+     							if (cont == self.pos):
+     								self.canvas.create_rectangle(i,j,i+40,j+40,fill="blue", outline = 'black')
+     								self.canvas.create_text(i+20,j+20,text=str(fat[cont]))
+     								self.pos = fat[cont]
+     							else:
+     								self.canvas.create_rectangle(i,j,i+40,j+40,fill="yellow", outline = 'black')
+     								self.canvas.create_text(i+20,j+20,text=str(fat[cont]))
+     					else:
+     						self.canvas.create_rectangle(i,j,i+40,j+40,fill="white", outline = 'black')
+     					cont += 1
+     					if cont == c:
+     						return
+             
+
                        
 
      def show_error1(self):
