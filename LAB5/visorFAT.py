@@ -198,10 +198,10 @@ class App(tk.Tk):
              c= int((self.sectorsPerFat*self.bytesPerSector )/self.bytesRead)
 
              with open(self.fname,mode='rb') as file:              
-                  file.seek(q)
+                  file.seek(q)#bytes
                   ## Lee solo las primeras 512 entradas de la FAT
                   self.fat = []
-                  for i in range(c):
+                  for i in range(c):#sectores
                       byte=file.read(self.bytesRead)
                       i=int.from_bytes(byte,byteorder='little',signed=True)
                       self.fat.append(i)                  
@@ -261,7 +261,6 @@ class App(tk.Tk):
 
      	if event:
      		self.pos = int(event.widget.get())
-     		print(self.pos)
 
 	     	if self.fname == None:
 	     		self.show_error1()
