@@ -22,10 +22,13 @@ class App(tk.Tk):
          self.bytesPerSector=0
          self.numberTracks = 0
          self.pos = 0
+         self.nombres = []
          self.clusters = []
+         self.sizes = []
+         self.cant = 0
+         self.tipo = None
          
          self.title("Visor File System FAT") 
-         root = tk.Tk()
          self.width = 540
          self.height = 1000000
          self.frame=tk.Frame(self,width=300,height=300)
@@ -40,16 +43,14 @@ class App(tk.Tk):
          btn_file = tk.Button(self, text="Choose file system image",command=self.choose_file)         
          btn_showBoot = tk.Button(self, text="Boot Sector",command=self.show_bootsector)
          btn_showFat = tk.Button(self, text="File Allocation Table",command=self.show_fat)
-         btn_showRootDir = tk.Button(self, text="Root directory",command=self.show_rootdir)                  
+         btn_showRootDir = tk.Button(self, text="Copy Files",command=self.show_rootdir)                  
          btn_file.grid(row=0, column=0, columnspan=2, padx=60,pady=20 )                 
          btn_showBoot.grid(row=1, column=0)
          btn_showFat.grid(row=1, column=1)
          btn_showRootDir.grid(row=2, column=0, columnspan=2,padx=60,pady=20,sticky='nswe')
 
-         ##self.canvas.grid(row=3, column=0,rowspan=3, columnspan=2)
          self.canvas.config( yscrollcommand=vbar.set)
          self.canvas.pack(side = tk.LEFT, expand=True, fill=tk.BOTH)
-         ##self.canvas.config(highlightthickness=0)  
          self.combobox = tk.ttk.Combobox(self, values=self.clusters)
          self.combobox.bind("<<ComboboxSelected>>", self.pintar)
          self.combobox.grid(row=3, column=0, columnspan=2)
@@ -171,6 +172,7 @@ class App(tk.Tk):
                   volumen=file.read(8)
                   texto=volumen.decode('utf-8')
                   self.canvas.create_text(30,420, text='File System Type: '+texto,anchor=tk.W)
+                  self.tipo = texto
                   if ("FAT32" in texto):	
                      self.bytesRead=4
                   else:
@@ -196,14 +198,24 @@ class App(tk.Tk):
              q = self.rootEntries * self.sectorsxClusters
              #c = math.floor((self.totalSectors-self.reservedSectors-self.numFats*self.sectorsPerFat)/self.sectorsxClusters)            
              c= int((self.sectorsPerFat*self.bytesPerSector )/self.bytesRead)
-
+             if("FAT12" in self.tipo):
+             	self.bytesRead = 1.5
+             	c = self.sectorsPerFat*self.bytesPerSector*3
+             	c = int(c/2)
+             	self.bytesRead = 2
              with open(self.fname,mode='rb') as file:              
                   file.seek(q)#bytes
                   ## Lee solo las primeras 512 entradas de la FAT
                   self.fat = []
+
                   for i in range(c):#sectores
                       byte=file.read(self.bytesRead)
                       i=int.from_bytes(byte,byteorder='little',signed=True)
+                      if ("FAT12" in self.tipo):
+                      	if(i % 2) == 0:
+                      		i = i & 0x0fff
+                      	else:
+                      		i = i >> 4
                       self.fat.append(i)                  
                   cont = 0
                   for j in range(0,h,40):
@@ -246,17 +258,38 @@ class App(tk.Tk):
      		    byte = file.read(4)
      		    sizeFile = int.from_bytes(byte,byteorder='little',signed=True)
      		    obj = [0]*1000
+     		    self.copy(j,file)
      		    if (firstCluster>0):
+     		    	self.cant = self.cant + 1
      		    	self.canvas.create_text(30,desplaza, text='File name: '+name +'.'+ext,anchor=tk.W)
+     		    	self.nombres.append((name +'.'+ext))
      		    	desplaza=desplaza+20
      		    	self.canvas.create_text(30,desplaza, text='Inicio de cluster: '+str(firstCluster),anchor=tk.W)
      		    	self.clusters.append(firstCluster)
      		    	desplaza=desplaza+20
      		    	self.canvas.create_text(30,desplaza, text='Size: '+str(sizeFile),anchor=tk.W)
+     		    	self.sizes.append(sizeFile)
      		    	desplaza = desplaza + 20
      	self.combobox['values']=self.clusters 
 
-
+     def copy(self,cont,file):
+     	n = int((self.rootEntries*32)/self.bytesPerSector)
+     	if(cont+1==n):
+     		for i in range (self.cant):
+     			info = file.read(self.sizes[i])
+     			print(self.nombres[i])
+     			print("Size:")
+     			print(self.sizes[i])
+     			sobrante = math.ceil(self.sizes[i]/self.bytesPerSector)-(self.sizes[i]/self.bytesPerSector)
+     			print("Sector sobrante:")
+     			print(sobrante)
+     			restantes = self.bytesPerSector * sobrante
+     			print("Bytes restantes:")
+     			print(int(restantes))
+     			if(restantes>0):
+     				file.read(int(restantes))
+     			with open(self.nombres[i],mode ='wb') as archivo:
+     				archivo.write(info)
      def pintar(self,event=None):
 
      	if event:
