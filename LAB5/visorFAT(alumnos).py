@@ -1,7 +1,7 @@
 # Autor: Prof. Alejandro T. Bello Ruiz
 # Curso: INF239 Sistemas Operativos
 # Laboratorio 5
-
+from tkinter import ttk
 import tkinter as tk
 import tkinter.filedialog as fd
 import tkinter.messagebox as mb
@@ -22,6 +22,7 @@ class App(tk.Tk):
          self.bytesPerSector=0
          self.numberTracks = 0
          self.pos = 0
+         self.clusters = []
          
          self.title("Visor File System FAT") 
          root = tk.Tk()
@@ -49,6 +50,10 @@ class App(tk.Tk):
          self.canvas.config( yscrollcommand=vbar.set)
          self.canvas.pack(side = tk.LEFT, expand=True, fill=tk.BOTH)
          ##self.canvas.config(highlightthickness=0)  
+         self.combobox = tk.ttk.Combobox(self, values=self.clusters)
+         self.combobox.bind("<<ComboboxSelected>>", self.pintar)
+         self.combobox.grid(row=3, column=0, columnspan=2)
+
 
 
          
@@ -225,6 +230,7 @@ class App(tk.Tk):
      		self.show_error1()
      	else:
      		self.canvas.delete("all")
+	     	
      	q = (self.reservedSectors+self.numFats*self.sectorsPerFat)*self.bytesPerSector
 
      	with open(self.fname,mode='rb') as file:   
@@ -244,50 +250,56 @@ class App(tk.Tk):
      		    sizeFile = int.from_bytes(byte,byteorder='little',signed=True)
      		    obj = [0]*1000
      		    if (firstCluster>0):
-     		    	obj[j] =self.canvas.create_text(30,desplaza, text='File name: '+name +'.'+ext,anchor=tk.W)
+     		    	self.canvas.create_text(30,desplaza, text='File name: '+name +'.'+ext,anchor=tk.W)
      		    	desplaza=desplaza+20
      		    	self.canvas.create_text(30,desplaza, text='Inicio de cluster: '+str(firstCluster),anchor=tk.W)
+     		    	self.clusters.append(firstCluster)
      		    	desplaza=desplaza+20
      		    	self.canvas.create_text(30,desplaza, text='Size: '+str(sizeFile),anchor=tk.W)
      		    	desplaza = desplaza + 20
-     		    	self.pos = firstCluster
-     		    	self.canvas.tag_bind(obj[j], 'clickeame', self.pintar)
+     	self.combobox['values']=self.clusters 
 
 
-     def pintar(self):
-     	if self.fname == None:
-     		self.show_error1()
-     	else:
-     		self.canvas.delete("all")
-     		w=self.width
-     		h=self.height
-     		self.canvas.delete(tk.ALL)
-     		q = self.rootEntries * self.sectorsxClusters
-     		#c = math.floor((self.totalSectors-self.reservedSectors-self.numFats*self.sectorsPerFat)/self.sectorsxClusters)
-     		c= int((self.sectorsPerFat*self.bytesPerSector )/self.bytesRead)
+     def pintar(self,event=None):
 
-     		with open(self.fname,mode='rb') as file:
-     			file.seek(q)
-     			## Lee solo las primeras 512 entradas de la FAT
-     			cont = 0
-     			for j in range(0,h,40):
-     				for i in range(0,w,40):
-     					if fat[cont] != 0:
-     						if cont == 0 or cont == 1:
-     							self.canvas.create_rectangle(i,j,i+40,j+40,fill="red", outline = 'black')
-     						else:
-     							if (cont == self.pos):
-     								self.canvas.create_rectangle(i,j,i+40,j+40,fill="blue", outline = 'black')
-     								self.canvas.create_text(i+20,j+20,text=str(fat[cont]))
-     								self.pos = fat[cont]
-     							else:
-     								self.canvas.create_rectangle(i,j,i+40,j+40,fill="yellow", outline = 'black')
-     								self.canvas.create_text(i+20,j+20,text=str(fat[cont]))
-     					else:
-     						self.canvas.create_rectangle(i,j,i+40,j+40,fill="white", outline = 'black')
-     					cont += 1
-     					if cont == c:
-     						return
+     	if event:
+     		self.pos = int(event.widget.get())
+     		print(self.pos)
+
+	     	if self.fname == None:
+	     		self.show_error1()
+	     	else:
+	     		self.canvas.delete("all")
+	     		self.combobox['values']=self.clusters 
+	     		w=self.width
+	     		h=self.height
+	     		self.canvas.delete(tk.ALL)
+	     		q = self.rootEntries * self.sectorsxClusters
+	     		#c = math.floor((self.totalSectors-self.reservedSectors-self.numFats*self.sectorsPerFat)/self.sectorsxClusters)
+	     		c= int((self.sectorsPerFat*self.bytesPerSector )/self.bytesRead)
+
+	     		with open(self.fname,mode='rb') as file:
+	     			file.seek(q)
+	     			## Lee solo las primeras 512 entradas de la FAT
+	     			cont = 0
+	     			for j in range(0,h,40):
+	     				for i in range(0,w,40):
+	     					if self.fat[cont] != 0:
+	     						if cont == 0 or cont == 1:
+	     							self.canvas.create_rectangle(i,j,i+40,j+40,fill="red", outline = 'black')
+	     						else:
+	     							if (cont == self.pos):
+	     								self.canvas.create_rectangle(i,j,i+40,j+40,fill="blue", outline = 'black')
+	     								self.canvas.create_text(i+20,j+20,text=str(self.fat[cont]))
+	     								self.pos = self.fat[cont]
+	     							else:
+	     								self.canvas.create_rectangle(i,j,i+40,j+40,fill="yellow", outline = 'black')
+	     								self.canvas.create_text(i+20,j+20,text=str(self.fat[cont]))
+	     					else:
+	     						self.canvas.create_rectangle(i,j,i+40,j+40,fill="white", outline = 'black')
+	     					cont += 1
+	     					if cont == c:
+	     						return
              
 
                        
